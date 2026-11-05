@@ -9,22 +9,20 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import MinMaxScaler
 
 
 df = pd.read_csv(r"C:\Users\ASUS\Downloads\Bootcamp\Bases de datos-pandas\Bases de datos\ejercicios clase\steam-200k.csv")
 
+#Indice 
+# 20 - Exploración de los datos
+# 218 - Preparación de los datos
+# 
+
+
 #######  1. Exploración de los datos ########
 
-
-#print(df.head())
-#   151603712  The Elder Scrolls V Skyrim  purchase    1.0  0
-#0  151603712  The Elder Scrolls V Skyrim      play  273.0  0
-#1  151603712                   Fallout 4  purchase    1.0  0
-#2  151603712                   Fallout 4      play   87.0  0
-#3  151603712                       Spore  purchase    1.0  0
-#4  151603712                       Spore      play   14.9  0
-
-#df.info()
+#print(df.info())
 # #   Column                      Non-Null Count   Dtype  
 #---  ------                      --------------   -----  
 # 0   151603712                   199999 non-null  int64  
@@ -32,7 +30,6 @@ df = pd.read_csv(r"C:\Users\ASUS\Downloads\Bootcamp\Bases de datos-pandas\Bases 
 # 2   purchase                    199999 non-null  str    
 # 3   1.0                         199999 non-null  float64
 # 4   0                           199999 non-null  int64 
-
 #print(df.describe())
 #          151603712            1.0         0
 #count  1.999990e+05  199999.000000  199999.0
@@ -43,670 +40,642 @@ df = pd.read_csv(r"C:\Users\ASUS\Downloads\Bootcamp\Bases de datos-pandas\Bases 
 #50%    8.691201e+07       1.000000       0.0
 #75%    1.542309e+08       1.300000       0.0
 #max    3.099031e+08   11754.000000       0.0
+#print(df.shape) # (199999, 5)
+#print(df.columns) 
+# ['151603712', 'The Elder Scrolls V Skyrim', 'purchase', '1.0', '0']
+#print(df.isnull().sum())
+#151603712                     0
+#The Elder Scrolls V Skyrim    0
+#purchase                      0
+#1.0                           0
+#0                             0
+#print(df.duplicated().sum()) #707
 
-#----------------------------------------------------------------
-#En la descripcion de la BD en Kaggle se indica que  
-# - "This dataset Is a list of user behaviors, with columns: 
-# user-id, game-title, behavior-name, value" por lo tanto de 
-# elimina la fila 5 ya que solo contiene (0)
-#----------------------------------------------------------------
+#  Eliminar la columna "0" ya que no tiene informacion
 
 df = df.drop(columns=["0"])
+
+#--------------------dar nombre a las columnas -----------------
+df.columns = [
+      "user-id",
+      "game-title",
+      "behavior-name",
+      "value"
+  ]
+
 #print(df.head())
-#   151603712  The Elder Scrolls V Skyrim  purchase    1.0
-#0  151603712  The Elder Scrolls V Skyrim      play  273.0
-#1  151603712                   Fallout 4  purchase    1.0
-#2  151603712                   Fallout 4      play   87.0
-#3  151603712                       Spore  purchase    1.0
-#4  151603712                       Spore      play   14.9
+#     user-id                  game-title behavior-name  value
+#0  151603712  The Elder Scrolls V Skyrim          play  273.0
+#1  151603712                   Fallout 4      purchase    1.0
+#2  151603712                   Fallout 4          play   87.0
+#3  151603712                       Spore      purchase    1.0
+#4  151603712                       Spore          play   14.9
 
-df.columns = ["user_id", "game_title", "behavior_name", "value"]
-#print(df.info())
-# #   Column         Non-Null Count   Dtype  
-#---  ------         --------------   -----  
-# 0   user_id        199999 non-null  int64  
-# 1   game_title     199999 non-null  str    
-# 2   behavior_name  199999 non-null  str    
-# 3   value          199999 non-null  float64
+###  Comportamientos
+#print(df["behavior-name"].value_counts())
+#behavior-name
+#purchase    129510
+#play         70489
 
-#----------------------------------------------------------------
-#Con el fin de verificar que se haya eliminado la comlumna que 
-# no tiene valores se ejecuta de nuevo .describe() y veriifcar 
-# que no hayan alteraciones o modificaciones adicionales en la 
-# BD:
-#----------------------------------------------------------------
+### cantidad de usuarios
+#print(df["user-id"].nunique()) #12393
 
-#print(df.describe())
-#            user_id          value
-#count  1.999990e+05  199999.000000
-#mean   1.036556e+08      17.874468
-#std    7.208084e+07     138.057292
-#min    5.250000e+03       0.100000
-#25%    4.738420e+07       1.000000
-#50%    8.691201e+07       1.000000
-#75%    1.542309e+08       1.300000
-#max    3.099031e+08   11754.000000
+### cantidad de videojuegos
+#print(df["game-title"].nunique())  #5155
 
-#----------------------------------------------------------------
-#En cuanto al User ID, este se puede repetir ya que el mismo 
-# usuario puede tener diferentes comportamientos, por ello sus 
-# duplicados no se eliminan y ayuda a tener una mejor idea del 
-# comportamiento del usuario
+### Videojuegos más frecuentes
+#print(df["game-title"].value_counts().head(10)) 
+#game-title
+#Dota 2                             9682
+#Team Fortress 2                    4646
+#Counter-Strike Global Offensive    2789
+#Unturned                           2632
+#Left 4 Dead 2                      1752
+#Counter-Strike Source              1693
+#Counter-Strike                     1424
+#Garry's Mod                        1397
+#The Elder Scrolls V Skyrim         1393
+#Warframe                           1271
 
-#Por otra parte el valor representa segun la descripcion de BD 
-# la cantidad de horas que un usuario ha jugado -  y es bastante
-# claro el porque hay un valor como 1 ya que representa la 
-# actividad de comprar.
-#----------------------------------------------------------------
+###Actividad por usuario
+actividad_usuario = df.groupby("user-id").size()
+#print(actividad_usuario.describe())
 
-##Se identifica el tamaño de la BD
+#count    12393.000000
+#mean        16.138062
+#std         51.878442
+#min          1.000000
+#25%          2.000000
+#50%          3.000000
+#75%          9.000000
+#max       1573.000000
 
-#print(df.shape)
-#(199999, 4)
+###  Análisis de comportamientos
 
-#Se identifica, si hay valores nulos
-#print(df.isna().sum())
-#user_id          0
-#game_title       0
-#behavior_name    0
-#value            0
+porcentajes = df["behavior-name"].value_counts(normalize=True) * 100
+#print(porcentajes)
 
-#----------------------------------------------------------------
-#Se buscan los valores duplicados y se encuentran 707, ya que no 
-# hay fechas o informacion adicional, se opta por dejar los 
-# valores ya que pueden ser registros de dias diferentes y al 
-# elimnarlos puede afectar el analisis de la BD
-#----------------------------------------------------------------
+#behavior-name
+#purchase    64.755324
+#play        35.244676
 
-#print(df.duplicated().sum())
-#np.int64(707)
+################################   Visualizacion  ################################
 
-#----------------------------------------------------------------
-#Se buscan los valores unicos y la cantidad de ellos por columna,
-#  esto con el fin de ver si necesitan alguna modificacion. 
+# Filtrar compras
+df_purchase = df[df["behavior-name"] == "purchase"]
 
-#Se encuentra que en "behavior_name", estan unificados y 
-# correctos ['play', 'purchase'], que hay 12393 usuarios unicos 
-# y que hay 5155 juegos unicos. 
+# Cantidad de compras por usuario
+compras_usuario = df_purchase.groupby("user-id").size()
 
-#----------------------------------------------------------------
-#print(df["behavior_name"].unique())
-#['play', 'purchase']
+# Ordenar de mayor a menor
+compras_usuario = compras_usuario.sort_values(ascending=False)
 
-#print(df["user_id"].nunique())
-#12393
+# Graficar
+#plt.figure(figsize=(12,5))
 
-#print(df["game_title"].nunique())
-#5155
+#compras_usuario.head(20).plot(kind="bar")
 
-#----------------------------------------------------------------
-#Debido al alto numero de valores unicos con formato str en las 
-# columnas correspondientes, se elige la opcion de unificar su 
-# formato para que la informacion que se obtenga sea lo mas 
-# uniforme posible, sin necesidad de revisar uno a uno los 
-# valores de las columnas
-#----------------------------------------------------------------
-
-df["game_title"] = df["game_title"].str.lower().str.strip().str.title()
-df["behavior_name"] = df["behavior_name"].str.lower().str.strip().str.title()
-
-#######   Visualizacion  ####### 
-
-#Con la informacion que proporciona la BD es porsible responder 
-# la siguiente pregunta:
-
-#¿Cuáles son los juegos a los que más tiempo dedican los usuarios?
-#Para ello es necesario hacer un filtro de los juegos que tienen 
-# como comportamiento "play"
-
-#----------------------------------------------------------------
-df_juego = df[df["behavior_name"] == 'Play']
-#print(df_juego.head())
-#     user_id                  game_title behavior_name  value
-#0  151603712  The Elder Scrolls V Skyrim          Play  273.0
-#2  151603712                   Fallout 4          Play   87.0
-#4  151603712                       Spore          Play   14.9
-#6  151603712           Fallout New Vegas          Play   12.1
-#8  151603712               Left 4 Dead 2          Play    8.9
-
-#Se verifica el tamaño de la BD
-#print(df_juego.shape)
-#(70489, 4)
-
-#print(df_juego["behavior_name"].unique())
-#['Play']
-
-df_compra = df[df['behavior_name'] == "Purchase"]
-#print(df_compra.head())
-#     user_id         game_title behavior_name  value
-#1  151603712          Fallout 4      Purchase    1.0
-#3  151603712              Spore      Purchase    1.0
-#5  151603712  Fallout New Vegas      Purchase    1.0
-#7  151603712      Left 4 Dead 2      Purchase    1.0
-#9  151603712           Huniepop      Purchase    1.0
-
-#print(df_compra.shape)
-#(129510, 4)
-
-juego_tiempo = df_juego.groupby("game_title")["value"].sum().sort_values(ascending=False)
-#print(juego_tiempo.head(10))
-#game_title
-#Dota 2                                         981684.6
-#Counter-Strike Global Offensive                322771.6
-#Team Fortress 2                                173673.3
-#Counter-Strike                                 134261.1
-#Sid Meier'S Civilization V                      99821.3
-#Counter-Strike Source                           96075.5
-#The Elder Scrolls V Skyrim                      70889.3
-#Garry'S Mod                                     49725.3
-#Call Of Duty Modern Warfare 2 - Multiplayer     42009.9
-#Left 4 Dead 2                                   33596.7
-
-juego10 = juego_tiempo.head(10)
-#plt.figure(figsize=(10, 6))
-#plt.barh(juego10.index, juego10.values)
-#plt.xlabel('Tiempo (horas)')
-#plt.ylabel('Juego')
-#plt.title('Top 10 de juegos por tiempo jugado')
-#plt.xticks(rotation=90)
-#plt.grid(axis='x')
-#plt.ticklabel_format(axis="x", style="plain", useOffset=False)
-#plt.tight_layout()
-#plt.show()
-
-#----------------------------------------------------------------
-#Es posible identificar que el juego que mas juegan los usuarios 
-# es Dota 2 y le sigue Counter-Strike Global Offensive
-#----------------------------------------------------------------
-
-comportamiento = df["behavior_name"].value_counts()
-
-#plt.figure(figsize=(10, 6))
-#plt.pie(comportamiento.values, labels=comportamiento.index, autopct='%1.1f%%')
-#plt.title('Distribución de comportamiento')
-#plt.show()
-
-#Se identifica que es importante conocer la cantidad de informacion 
-# si se enfoca en comportamiento de compra o de juego, donde es posible 
-# identificar que el 64% esta en compra y el exedente 35.2 en juego
-
-#----------------------------------------------------------------
-
-#Ahora podemos responder la siguiente pregunta 
-#2. ¿Cuáles son los juegos que más se compran en Steam?
-
-MasComprados = df_compra["game_title"].value_counts().head(10)
-#print(MasComprados)
-#game_title
-#Dota 2                             4841
-#Team Fortress 2                    2323
-#Unturned                           1563
-#Counter-Strike Global Offensive    1412
-#Half-Life 2 Lost Coast              981
-#Counter-Strike Source               978
-#Left 4 Dead 2                       951
-#Counter-Strike                      856
-#Warframe                            847
-#Half-Life 2 Deathmatch              823
-
-MasComprados10 = MasComprados.head(10)
-#plt.figure(figsize=(10, 6))
-#plt.barh(MasComprados10.index, MasComprados10.values)
-#plt.xlabel('Cantidad de compras')
-#plt.ylabel('Juego')
-#plt.title('Top 10 de juegos más comprados')
-#plt.xticks(rotation=90)
-#plt.grid(axis='x')
-#plt.ticklabel_format(axis="x", style="plain", useOffset=False)
-#plt.tight_layout()
-#plt.show()
-
-#Es posible identificar que el juego mas comprado es Dota 2 y le 
-# sigue Team Fortress 2
-#----------------------------------------------------------------
-
-#Ahora tambien es posible responder la siguiente pregunta: 
-# 3. ¿Cómo se distribuyen las horas de juego entre los usuarios?
-
-horas_usuario = df_juego.groupby("user_id")["value"].sum().sort_values(ascending=False)
-#print(horas_usuario.head(10))
-#user_id
-#73017395     11754.0
-#10599862     11651.7
-#100630947    10853.2
-#26762388     10470.1
-#153382649     9640.0
-#43684632      9546.3
-#48798067      9427.2
-#52731290      9417.6
-#42935819      8172.9
-#14544587      8137.1
-
-UsuariosHoras10 = horas_usuario.head(10)
-
-#plt.figure(figsize=(10, 6))
-#plt.bar(UsuariosHoras10.index.astype(str),UsuariosHoras10.values)
-
-#plt.title("Top 10 usuarios con más horas de juego")
+#plt.title("Top 20 usuarios con más compras")
 #plt.xlabel("ID del usuario")
-#plt.ylabel("Horas acumuladas")
+#plt.ylabel("Cantidad de compras")
 
 #plt.xticks(rotation=45)
-#plt.grid(axis='y')
-#plt.tight_layout()
+#plt.grid(axis="y", alpha=0.7)
 #plt.show()
 
-#Los usuarios que mas invierten tiempo estan entre 10.000 y 12.000 horas 
-# jugando, que son los primeros 4
+# el jugador que mas compra ha realizado mas de 1000 compras los que siguen han realizado casi 800 compras 
+# los siguientes jugadores hasta llegar a los 20 mas compradores estan entre 600 y 400 compras 
 
-#----------------------------------------------------------------
+#------------------------------------------------------------------------------
+
+# Filtrar videojuegos jugados
+df_play = df[df["behavior-name"] == "play"]
+
+# Cantidad de videojuegos diferentes por usuario
+juegos_usuario = df_play.groupby("user-id")["game-title"].nunique()
+
+# Ordenar
+juegos_usuario = juegos_usuario.sort_values(ascending=False)
+
+#Graficar
+#plt.figure(figsize=(12,5))
+
+#juegos_usuario.head(20).plot(kind="bar")
+
+#plt.title("Top 20 usuarios con más videojuegos")
+#plt.xlabel("ID del usuario")
+#plt.ylabel("Cantidad de videojuegos")
+
+#plt.xticks(rotation=45)
+#plt.grid(axis="y", alpha=0.7)
+#plt.show()
+
+#el jugador con mas videojuegos tiene casi 500, los siguientes estan entre 300 y 200 videojuegos hasta completar los 20 que tienen mas juegos
+
+#------------------------------------------------------------------------------
+
+# Tiempo total de juego por usuario
+tiempo_usuario = df_play.groupby("user-id")["value"].sum()
+
+# Ordenar
+tiempo_usuario = tiempo_usuario.sort_values(ascending=False)
+
+#plt.figure(figsize=(12,5))
+
+#tiempo_usuario.head(20).plot(kind="bar")
+
+#plt.title("Top 20 usuarios con mayor tiempo de juego")
+#plt.xlabel("ID del usuario")
+#plt.ylabel("Tiempo de juego")
+
+#plt.xticks(rotation=45)
+#plt.grid(axis="y", alpha=0.7)
+#plt.show()
+
+# Los pimeros 4 jugadores invierten entre 10000 y 12000 horas los siguientes 6 entre 8000 y 10000 horas 
+# los demas entre 7000 y 8000 horas
+
+#------------------------------------------------------------------------------
+
+# Crear tabla de comportamiento por usuario
+comportamiento_usuario = pd.DataFrame({
+    "compras": compras_usuario,
+    "juegos_diferentes": juegos_usuario,
+    "tiempo_juego": tiempo_usuario
+})
+
+# Reemplazar valores faltantes por cero
+comportamiento_usuario = comportamiento_usuario.fillna(0)
+
+#print(comportamiento_usuario.head())
+
+#         compras  juegos_diferentes  tiempo_juego
+#user-id                                          
+#5250          21                6.0         225.5
+#76767         36               20.0        1227.0
+#86540         82               15.0         255.0
+#103360        10                0.0           0.0
+#144736         8                1.0           0.1
+
 #######  2. Preparación de los datos ########
 
-#separar los registros - play (usuario jugó un juego) / purchase (usuario 
-# compró un juego)
+# Cantidad de duplicados
+#print("Duplicados:", df.duplicated().sum())
+# Duplicados: 707
 
-#sin emabrgo para esto ya esta df_juego y df_compra respectivamente
-#----------------------------------------------------------------
+# Duplicados por comportamiento
+#print(df[df.duplicated(keep=False)]["behavior-name"].value_counts())
+#behavior-name
+#purchase    1414
 
-juego_comprado = (df_compra.groupby("user_id")["game_title"].nunique())
+# Separar comportamientos
+df_purchase = df[df["behavior-name"] == "purchase"]
+df_play = df[df["behavior-name"] == "play"]
 
-df_grupo = pd.concat([horas_usuario, juego_comprado], axis=1)
+# Compras por usuario
+compras_usuario = df_purchase.groupby("user-id").size()
 
-df_grupo.colums = ["horas_jugadas", "juegos_comprados"] 
+# Juegos diferentes por usuario
+juegos_usuario = df_play.groupby("user-id")["game-title"].nunique()
 
-df_grupo = df_grupo.fillna(0)
+# Tiempo total de juego por usuario
+tiempo_usuario = df_play.groupby("user-id")["value"].sum()
 
-#print("Dimensiones:", df_grupo.shape)
-#print("Valores faltantes:")
-#print(df_grupo.isna().sum())
+# Construir tabla
+comportamiento_usuario = pd.DataFrame({
+    "compras": compras_usuario,
+    "juegos_diferentes": juegos_usuario,
+    "tiempo_juego": tiempo_usuario
+}).fillna(0)
 
-#Dimensiones: (12393, 2)
-#Valores faltantes:
-#value         0
-#game_title    0
+# Convertir cantidades a enteros
+comportamiento_usuario["compras"] = comportamiento_usuario["compras"].astype(int)
+comportamiento_usuario["juegos_diferentes"] = comportamiento_usuario["juegos_diferentes"].astype(int)
 
-#print(df_grupo.describe())
-#              value    game_title
-#count  12393.000000  12393.000000
-#mean     278.009021     10.392964
-#std      760.270618     35.635013
-#min        0.000000      1.000000
-#25%        1.300000      1.000000
-#50%       13.500000      2.000000
-#75%      155.600000      6.000000
-#max    11754.000000   1068.000000
+#print(comportamiento_usuario.head())
+#         compras  juegos_diferentes  tiempo_juego
+#user-id                                          
+#5250          21                  6         225.5
+#76767         36                 20        1227.0
+#86540         82                 15         255.0
+#103360        10                  0           0.0
+#144736         8                  1           0.1
 
-#print(df_grupo.head())
-#user_id                       
-#73017395   11754.0           1
-#10599862   11651.7         257
-#100630947  10853.2          10
-#26762388   10470.1         276
-#153382649   9640.0           2
 
-#####  StandadScaler #####
+#print((comportamiento_usuario["compras"] == 0).sum()) #0
+#print((comportamiento_usuario["juegos_diferentes"] == 0).sum()) #1043
+#print((comportamiento_usuario["tiempo_juego"] == 0).sum()) #1043
 
-#Escalado de los valores de la BD
+# ------------ Seleccionar las variables para clustering ------------
 
+X = comportamiento_usuario[
+    ["compras", "juegos_diferentes", "tiempo_juego"]
+].copy()
+
+#print(X.head())
+#         compras  juegos_diferentes  tiempo_juego
+#user-id                                          
+#5250          21                  6         225.5
+#76767         36                 20        1227.0
+#86540         82                 15         255.0
+#103360        10                  0           0.0
+#144736         8                  1           0.1
+#print(X.shape)
+#(12393, 3)
+
+#----------------Escalador ---------------------
+
+# Crear escalador
 scaler = StandardScaler()
-Xscaled = scaler.fit_transform(df_grupo)
 
-#print("Dimensiones de Xscaled:", Xscaled.shape)
-#print("Primeras cinco filas:")
-#print(Xscaled[:5])
+# Ajustar y transformar
+X_scaled = scaler.fit_transform(X)
 
-#Dimensiones de Xscaled: (12393, 2)
-#Primeras cinco filas:
-#[[ 1.50952223e+01 -2.63598693e-01]
-# [ 1.49606596e+01  6.92063699e+00]
-# [ 1.39103333e+01 -1.10279076e-02]
-# [ 1.34064134e+01  7.45384199e+00]
-# [ 1.23145213e+01 -2.35535273e-01]]
+# Convertir a DataFrame
+X_scaled = pd.DataFrame(
+    X_scaled,
+    columns=X.columns,
+    index=X.index
+)
 
-#####  3. Modelado #####
+#print(X_scaled.head())
+#          compras  juegos_diferentes  tiempo_juego
+#user-id                                           
+#5250     0.294170           0.018337     -0.069069
+#76767    0.712431           0.838113      1.248278
+#86540    1.995099           0.545336     -0.030265
+#103360  -0.012555          -0.332995     -0.365686
+#144736  -0.068323          -0.274440     -0.365554
 
-####  Metodo de Codo #####
-
-valores_k = range(2, 10)
-
-inercia = []
+# Guardar resultados
+inercias = []
 siluetas = []
 
-for cantidad in valores_k:
+# Evaluar entre 2 y 10 clusters
+rangos = range(2, 11)
+
+for k in rangos:
 
     modelo = KMeans(
-        n_clusters=cantidad,
+        n_clusters=k,
         random_state=42,
         n_init=10
     )
 
-    etiquetas = modelo.fit_predict(Xscaled)
+    etiquetas = modelo.fit_predict(X_scaled)
 
-    inercia.append(modelo.inertia_)
+    # Método del codo
+    inercias.append(modelo.inertia_)
 
-    siluetas.append(
-        silhouette_score(Xscaled, etiquetas)
-    )
+    # Silhouette
+    silueta = silhouette_score(X_scaled,etiquetas,sample_size=3000,random_state=42)
 
-#Grafica para metodo de codo
+    siluetas.append(silueta)
 
-#plt.figure(figsize=(8, 5))
+# ------------------ Grafica del metodo del codo ------------------
+#plt.figure(figsize=(8,5))
+
 #plt.plot(
-#    list(valores_k),
-#    inercia,
-#    marker="o"
-#)
-#plt.xlabel("Número de clusters (k)")
-#plt.ylabel("Inercia")
-#plt.title("Método del codo - K-Means")
-#plt.xticks(list(valores_k))
-#plt.grid(alpha=0.3)
-#plt.show()
-
-####    K-Means  ####
-
-#plt.figure(figsize=(8, 5))
-#plt.plot(
-#    list(valores_k),
-#    siluetas,
+#    list(rangos),
+#    inercias,
 #    marker="*"
 #)
-#plt.xlabel("Número de clusters (k)")
-#plt.ylabel("Silhouette Score")
-#plt.title("Evaluación de clusters - K-Means")
-#plt.xticks(list(valores_k))
-#plt.grid(alpha=0.3)
+
+#plt.title("Método del codo")
+#plt.xlabel("Cantidad de clusters (K)")
+#plt.ylabel("Inercia")
+#plt.xticks(list(rangos))
+#plt.grid(alpha=0.5)
+
 #plt.show()
 
-#----------------------------------------------------------------
-#En "k_elegido", se pone la cantidad de clusters (grupos que se desean 
-# elegir) En este caso tanto en el metodo de codo y en silhouette se 
-# empieza a estabilizar en 6
+#segun la grafica se identifica que se empieza a estabilizar en 5
 
-#donde es posible identificar que en el grupo 0 se encuentra la mayoria 
-# de los datoscon 10.493 y en el grupo 1 y 3 esta la menor cantidad de 
-# datos con 92 y 32 respectivamente
-#----------------------------------------------------------------
+# ------------------ Grafica del metodo Silhouette ------------------
 
-#---- cantidad de datos por grupo de cluster -----
-k_elegido = 6
+#plt.figure(figsize=(8,5))
 
+#plt.plot(
+#    list(rangos),
+#    siluetas,
+#    marker="o"
+#)
+
+#plt.title("Coeficiente Silhouette")
+#plt.xlabel("Cantidad de clusters (K)")
+#plt.ylabel("Puntuación Silhouette")
+#plt.xticks(list(rangos))
+#plt.grid(alpha=0.5)
+
+#plt.show()
+
+# se identifica que desde el # 5 se empieza a disminuir de forma cnotable la diferencia
+# entre cada uno de los grupos
+
+#-------------------- Elegir entre PCA y t-SNE --------------------
+# debido a que hay variable numericas, es mas sencillo de interpretar y a que permite identificar la proporcion de cantidad
+# de informacion que explica cada componente se elige PCA y debido a que el analisis que se busca es lineal
+
+# debido a que tiene pocas variables y el analisis no es complejo no se elige T-SNE
+
+# Crear modelo PCA
+pca = PCA(n_components=2)
+
+# Ajustar y transformar
+X_pca = pca.fit_transform(X_scaled)
+
+# Crear DataFrame
+df_pca = pd.DataFrame(
+    X_pca,
+    columns=["PC1", "PC2"],
+    index=X_scaled.index
+)
+
+#print(df_pca.head())
+#              PC1       PC2
+#user-id                    
+#5250     0.158136 -0.184006
+#76767    1.562842  0.570396
+#86540    1.547804 -0.981801
+#103360  -0.392838 -0.222115
+#144736  -0.390097 -0.215651
+
+#######  3. Modelado ########
+
+## ------------- Clusters -------------------
+
+# Definir cantidad de clusters
+k_optimo = 5
+
+# Crear modelo
 kmeans = KMeans(
-    n_clusters=k_elegido,
+    n_clusters=k_optimo,
     random_state=42,
     n_init=10
 )
 
-df_grupo["cluster_kmeans"] = kmeans.fit_predict(
-    Xscaled
-)
+# Entrenar modelo
+clusters = kmeans.fit_predict(X_scaled)
 
-#print(df_grupo["cluster_kmeans"].value_counts().sort_index())
+# Asignar resultados
+comportamiento_usuario["cluster"] = clusters
 
-#cluster_kmeans
-#0    10493
-#1       92
-#2     1217
-#3       32
-#4      354
-#5      205
+#print(comportamiento_usuario.head())
+#         compras  juegos_diferentes  tiempo_juego  cluster
+#user-id                                                   
+#5250          21                  6         225.5        0
+#76767         36                 20        1227.0        4
+#86540         82                 15         255.0        4
+#103360        10                  0           0.0        0
+#144736         8                  1           0.1        0
 
-#valores promedio de cada uno de los clusters
+### ---------- Grafica de visualizacion de grupo por PCA -----------
 
-perfil_kmeans = df_grupo.groupby(
-    "cluster_kmeans"
-)[
-    ["value", "game_title"]
-].mean().round(2)
+#plt.figure(figsize=(10,7))
 
-#print(perfil_kmeans)
-         
-#cluster_kmeans   value      game_title            
-#0                 53.12        3.41
-#1               5873.04       64.57
-#2                849.57       24.76
-#3               3112.34      494.06
-#4               2437.68       27.03
-#5               1713.04      154.24
-
-#######  Segmentacion en Grafica con K-means  #######
-
-#plt.figure(figsize=(10, 6))
-
-#plt.scatter(
-#    df_grupo["value"],
-#    df_grupo["game_title"],
-#    c=df_grupo["cluster_kmeans"],
-#    cmap="viridis",
-#    alpha=0.5
+#sns.scatterplot( 
+#    x=df_pca["PC1"],
+#    y=df_pca["PC2"],
+#    hue=comportamiento_usuario["cluster"],
+#    palette="viridis",
+#    alpha=0.6,
+#    s=35,
+#    hue_order=[0, 1, 2, 3, 4]
 #)
 
-#plt.xlabel("Horas jugadas")
-#plt.ylabel("Juegos comprados")
-#plt.title("Segmentación de usuarios con K-Means (K=6)")
-#plt.grid(alpha=0.2)
-#plt.tight_layout()
-#plt.show()
+#plt.title("Segmentación de usuarios mediante K-Means y PCA")
+#plt.xlabel("Componente principal 1")
+#plt.ylabel("Componente principal 2")
 
-######  DBSCAN ######
-
-#Iniciar con 5 samples
-
-min_samples_dbscan = 5
-
-vecinos = NearestNeighbors(
-    n_neighbors=min_samples_dbscan
-)
-
-vecinos.fit(Xscaled)
-
-distancias, indices = vecinos.kneighbors(Xscaled)
-
-#----------------------------------------------------------------
-#Se genera la grafica con el fin de identificar la posicion de K, el 
-# cual se podrá ver segun el codo de la grafica
-
-#No es posible establecer el punto de inflexion en la grafica debido 
-# a la cantidad de datos que esta muestra
-#----------------------------------------------------------------
-
-distancias_k = np.sort(
-    distancias[:, -1]
-)
-
-#plt.figure(figsize=(10, 5))
-#plt.plot(distancias_k)
-#plt.xlabel("Usuarios ordenados por distancia")
-#plt.ylabel("Distancia al vecino número 5")
-#plt.title("Gráfica de distancias para ajustar DBSCAN")
+#plt.legend(title="Clusters")
 #plt.grid(alpha=0.3)
+
 #plt.show()
 
-#----------------------------------------------------------------
-#Se amplia la grafica en la parte del codo, para identificar el 
-# punto en el que cambia y se identifica que se empieza a 
-# normalizar en 5
-#----------------------------------------------------------------
+#cantidad de usuarios por Cluster
+cantidad_clusters = comportamiento_usuario["cluster"].value_counts().sort_index()
 
-n = len(distancias_k)
-inicio = int(n * 0.95)
+#print(cantidad_clusters)
+#cluster
+#0    10822
+#1      124
+#2       44
+#3      244
+#4     1159
 
-#plt.figure(figsize=(10, 5))
-#plt.plot(
-#    range(inicio, n),
-#    distancias_k[inicio:]
+#plt.figure(figsize=(8,5))
+
+#sns.countplot(
+#    data=comportamiento_usuario,
+#    x="cluster",
+#    hue="cluster",
+#    palette="viridis",
+#    legend=False
 #)
 
-#plt.xlabel("Posición de la observación")
-#plt.ylabel("Distancia al quinto vecino")
-#plt.title("Ampliación del codo de DBSCAN")
-#plt.grid(alpha=0.3)
+#plt.title("Cantidad de usuarios por cluster")
+#plt.xlabel("Cluster")
+#plt.ylabel("Cantidad de usuarios")
+
+#plt.grid(axis="y", alpha=0.3)
 #plt.show()
 
-eps_elegido = 0.4  # Ajustar según la gráfica
+#promedio de cada uno de los clusters
+perfil_clusters = comportamiento_usuario.groupby("cluster")[
+    ["compras", "juegos_diferentes", "tiempo_juego"]
+].mean()
 
-dbscan = DBSCAN(
-    eps=eps_elegido,
-    min_samples=min_samples_dbscan
+#print(perfil_clusters)
+#            compras  juegos_diferentes  tiempo_juego
+#cluster                                             
+#0          3.571798           2.048790     72.178156
+#1         31.564516          20.129032   4940.769355
+#2        435.318182         184.568182   3508.886364
+#3        138.127049          74.934426   2006.608197
+#4         29.408973          16.742019   1214.490940
+
+perfil_clusters.plot(
+    kind="bar",
+    figsize=(11,6)
 )
 
-etiquetas_dbscan = dbscan.fit_predict(Xscaled)
+#plt.title("Comportamiento promedio de los usuarios por cluster")
+#plt.xlabel("Cluster")
+#plt.ylabel("Promedio de actividad")
 
-df_grupo["cluster_dbscan"] = etiquetas_dbscan
+#plt.xticks(rotation=0)
+#plt.legend(title="Variables")
 
-#print("Distribución de clusters:")
-#print(df_grupo["cluster_dbscan"].value_counts().sort_index())
-#print("Cantidad de grupos encontrados:",len(set(etiquetas_dbscan) - {-1}))
-#print("Cantidad de usuarios clasificados como ruido:",(etiquetas_dbscan == -1).sum())
-
-#----------------------------------------------------------------
-#Distribución de clusters:
-#cluster_dbscan
-#-1      129
-# 0    12230
-# 1        6
-# 2        5
-# 3       16
-# 4        7
-#Name: count, dtype: int64
-#Cantidad de grupos encontrados: 5
-#Cantidad de usuarios clasificados como ruido: 129
-#----------------------------------------------------------------
-
-mascara = etiquetas_dbscan != -1
-etiquetas_sin_ruido = etiquetas_dbscan[mascara]
-X_sin_ruido = Xscaled[mascara]
-
-n_clusters_dbscan = len(
-    set(etiquetas_sin_ruido)
-)
-
-#if 2 <= n_clusters_dbscan < len(etiquetas_sin_ruido):
-
-#    silhouette_dbscan = silhouette_score(
-#        X_sin_ruido,
-#        etiquetas_sin_ruido
-#    )
-
-#    print(
-#        "Silhouette DBSCAN sin ruido:",
-#        round(silhouette_dbscan, 4)
-#    )
-
-#else:
-#    print(
-#        "No se puede calcular Silhouette: "
-#        "no hay suficientes grupos válidos."
-#    )
-
-#Silhouette DBSCAN sin ruido: 0.8521
-
-#Grafica DBSCAN
-
-#Luego de revisar la grafica los grupos que se identifican no se ven ni 
-# diferencian con claridad, por tanto se ven los grupos sobrepuestos y 
-# no divididos, por tanto se toma la decision de tomar el analisis de la 
-# grafica de K-Means
-
-#plt.figure(figsize=(10, 6))
-
-#plt.scatter(
-#    df_grupo["value"],
-#    df_grupo["game_title"],
-#    c=df_grupo["cluster_dbscan"],
-#    cmap="plasma",
-#    alpha=0.5
-#)
-
-#plt.xlabel("Horas jugadas")
-#plt.ylabel("Juegos comprados")
-#plt.title("Segmentación de usuarios con DBSCAN")
-#plt.grid(alpha=0.2)
-#plt.tight_layout()
+#plt.grid(axis="y", alpha=0.3)
 #plt.show()
 
-#######  Interpretación de los clusters  #######
+silhouette_final = silhouette_score(
+    X_scaled,
+    comportamiento_usuario["cluster"],
+    sample_size=3000,
+    random_state=42
+)
 
-# Se identifica que hay varios grupos dentro de los cuales se encuentran 
-# grupos en los que:
+#print("Silhouette del modelo:", silhouette_final)
+#Silhouette del modelo: 0.7733802252974167
 
-#0 - "Los menos jugadores" es el grupo en el que menos tiempo se invierte 
-# en juegos y el que menos juegos juegan el que tiene la mayor cantidad 
-# de datos con 10.493 datos
-#1 - "Jugadores compulsivos" los que mas compran juegos con 92 datos
-#2 - "Jugadores y compradores moderados" con 1.217 datos
-#3 - "compradores compulsivos" los que mas compran juegos con 32 datos
-#4 - "Amantes de sus juegos" con 354 datos
-#5 - "Encantados por comprar y jugar" con 205 datos
+#######  4. Interpretación de los clusters ########
 
-#cluster_kmeans --value ----game_title-------Cant. de datos
-#0 ------------- 53.12-----3.41 -->Morado -------10493
-#1 ------------- 5873.04 --64.57 -->Violeta ------92
-#2 ------------- 849.57 ---24.76 -->Turquesa -----1217
-#3 ------------- 3112.34 --494.06 --Aguamarina ----32
-#4 ------------- 2437.68 --27.03 -->Verde --------354
-#5 ------------- 1713.04 --154.24 -->Amarillo -----205
+#Cluster 0  - Jugadores ocasionales
+#corresponde al 87.32% de los usuarios
+#10822 usuarios
+#compran en promedio 3.57
+#tienen 2.05 juegos 
+#invierten 72.18 horas en juegos_usuario
 
-#1. Qué caracteriza a los usuarios de este grupo? 
-# Se identifica que en la Base de Datos en los registros en general se 
-# los jugadores en su mayoria invierten mas tiempo jugando que 
-# comprando juegos
+#Es el grupo que tiene la mayor cantidad de usuarios, 
+#sin emabrgo tienen pocas compras, juegan poco con los 
+#videojuegos y tienen poco tiempo de juego. 
 
-#2. Son jugadores ocasionales o frecuentes? 
-# en los grupos 1, 3, 4 y 5 se encuentran los usuarios que invierten 
-# mas tiempo jugando
+#Cluster 1 - Jugadores intensivos
+#Representado por el 1% de los jugadores
+#Con 124 usuarios
+#tienen un promerio de compras de 31.56
+#tienen 20.13 juegos 
+#e invierten 4940.77 horas juegos_usuario
 
-#3. Presentan comportamientos similares de compra? 
-# en cuanto a los comportamientos de compra, se identifica que no tienen 
-# un alto nivel de compra
+#Es un grupo que tiene una cantidad moderada de compras y de 
+#videojuegos diferentes y son los qu einvierten mas tiempo en jugar
 
-#4. Qué diferencias existen entre los clusters? 
-# se identifica que el grupo en la mayor cantidad de tiempo invertida en 
-# jugar esta en el grupo 1 y 3, los que menos compras tienen con el 0 y 
-# el 2 y la mayor cantidad de datos se encuentran en los grupos 0 y 2
+#Cluster 2 - Coleccionistas de Videojuegos
+#cuenta con el 0.35% de los usuarios
+#con 44 usuarios
+#435.32 compras en promedio 
+#184.57 videojuegos diferentes
+#e invierten 3508.89 horas
+
+#Por lo anterior es posible identificar que son los que tienen 
+#mas compras y videojuegos, son los que tienen mas juegos. 
+#y tienen una considerable cantidad de horas de juego invertidas
+
+#Cluster 3 - Usuarios Activos 
+#corresponde al 1.97% de los usuarios
+#con 244 usuarios
+#138.13 compras en promedio
+#74.93 videojuegos
+#e invierten 2006.61 horas
+
+#Compran bastantes juegos, aunque juegan mas juegos, y tienen muchas 
+#horas de juego, son los uaurios que son mas equilibrados en de todos 
+#los grupos.
+
+#Cluster 4 - Jugadores frecuentes
+#corresponde al 9.35% de los usuarios
+#con 1159 usuarios
+#con compras de 29.41
+#tiene 16.74 videojuegos
+#e invierte 1214.49 horas de juegos_usuario
+
+#por tanto son los jugadores mas equilibrados tanto en 
+#compras, juegos y timepo invertido aunque esto no los hace especializados
+
+#----------------------Visualizacion de los perfiles ----------------------
+
+# Normalizar promedios de los clusters
+scaler_radar = MinMaxScaler()
+
+perfil_normalizado = pd.DataFrame(
+    scaler_radar.fit_transform(perfil_clusters),
+    columns=perfil_clusters.columns,
+    index=perfil_clusters.index
+)
+
+# Gráfica
+categorias = perfil_normalizado.columns.tolist()
+
+valores = perfil_normalizado.values
+
+angulos = np.linspace(
+    0, 2 * np.pi,
+    len(categorias),
+    endpoint=False
+).tolist()
+
+angulos += angulos[:1]
+
+plt.figure(figsize=(9,9))
+
+ax = plt.subplot(111, polar=True)
+
+for i, cluster in enumerate(perfil_normalizado.index):
+
+    datos = valores[i].tolist()
+    datos += datos[:1]
+
+    ax.plot(
+        angulos,
+        datos,
+        label=f"Cluster {cluster}"
+    )
+
+    ax.fill(angulos, datos, alpha=0.08)
+
+ax.set_xticks(angulos[:-1])
+ax.set_xticklabels(categorias)
+
+plt.title("Comparación de perfiles de usuarios")
+plt.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
+
+plt.show()
 
 
-#######  Recomendaciones de negocio  #######
+#######  5. Recomendaciones de negocio ########
 
-#1. Qué estrategia de marketing implementarías para cada grupo?
-####0: para este grupo por comprar juegos y pasar niveles, les daria 
-# puntos adicionales coln los que puedan tener creditos que les 
-# permitan tener descuentos en la compra de los siguientes juegos
+#cluster 0 : Jugadores ocasionales
+#Implementar campañas de activación mediante recomendaciones personalizadas,
+#novedades y contenido que motive a descubrir nuevos videojuegos.
 
-####1: por jugar tanto, crearia por temporadas campañas de compra de juegos 
-# con descuentos o promocionaria juegos mas cortos, que les creen 
-# curiosidad e interes en comprar mas juegos
+#descuentos de bienvenida, promociones para probar nuevos videojuegos y 
+# recomendaciones de títulos gratuitos o económicos. El objetivo sería 
+# incentivar su participación y aumentar su actividad.
 
-####2: son el grupo medio, por ello, haria estrategias que los permitan 
-# participar en juegos grupales, para que puedan invertir mas tiempo y 
-# dinero comprando juegos y por pasar niveles adicionaria creditos en 
-# sus cuentas para que de manera individual puedan comprar juegos
+#campañas de bajo costo para aumentar las compras
 
-####3: ya que son los que mas compran, lo que haria es invitarlos a pasar 
-# niveles que les den buenas recompensas que les ayude a seguir 
-# comprando juego, sin embargo para lograrlo deben invertir bastante 
-# tiempo, para tener los juegos con muy buenos descuentos
+#cluster 1 : Jugadores intensivos
+#Crear campañas de engagement, promocionar actualizaciones, expansiones y 
+#contenido adicional de los juegos que utilizan frecuentemente.
 
-####4: una estrategia mixta como la del grupo 2, sin emabrgo en la que 
-# compren mas y jueguen mas.
+#descuentos en expansiones, DLC, contenido adicional y productos 
+# relacionados con sus videojuegos favoritos. También podrían recibir 
+# beneficios por mantenerse activos.
 
-####5: una estrategia mixta como la del grupo 2, sin emabrgo en la que 
-# compren mas y jueguen mas.
+#también sería importante debido a su alto tiempo de juego. Se podrían 
+# desarrollar campañas para mantener su participación y motivar la 
+# adquisición de contenido adicional.
 
-#2. Qué tipo de promociones recibiría cada segmento? Para los grupos en 
-# que mas compran, haria promociones en las que tengan que invertir 
-# tiempo jugando y les otorgan creditos para que puedan comprar mas 
-# juegos en cuanto a los mas jugadores, daria premios pequeños y con 
-# frdcuencia para que acumulen creditos y compren mas juegos
+#cluster 2 : Coleccionistas de videojuegos
+#Ofrecer recomendaciones de nuevos lanzamientos, colecciones, paquetes de
+#videojuegos y acceso anticipado a novedades.
 
-#3. Qué usuarios priorizarías para campañas de fidelización?
-#Claro esta que haria mas campañas para obtener dinero, sin emabrgopara 
-# ello deben jugar, y los beneficios pueden ser en sumar credito, en 
-# diferentes cantidades dependiendo los juegos y la modalidad, por ello 
-# dependiendo el desempaño de cada jugador puede comprar juegos con 
-# diferente frecuencia
+#promociones por compras múltiples, paquetes de videojuegos, descuentos 
+# por colecciones y ofertas especiales para nuevos lanzamientos.
 
-#4. Qué información adicional sería útil para mejorar la segmentación?
-#como informacion adicional, seria bueno tener las categorias de los 
-# juegos, las edades de los jugadores, la ubicacion e idioma de los 
-# jugadores, las empresas que crean los juegos, los tipos de juegos.
+#merece atención por su elevado número de compras y videojuegos diferentes.
+#  Se podrían implementar estrategias para conservar su interés y motivar 
+# futuras adquisiciones.
+
+#cluster 3 : Usuarios altamente activos
+#Desarrollar estrategias de fidelización VIP, beneficios exclusivos y 
+#programas de recompensas para fortalecer su relación con la plataforma.
+
+#recompensas exclusivas, acceso anticipado, beneficios VIP y descuentos 
+# especiales por fidelidad. Se buscaría reconocer su alto nivel de 
+# participación.
+
+#sería una prioridad porque presenta un comportamiento de alta actividad 
+# en las tres variables. Es importante mantener su satisfacción y 
+# fortalecer su relación con la plataforma.
+
+#cluster 4 : Jugadores frecuentes
+#Incentivar nuevas compras mediante recomendaciones relacionadas con 
+#sus preferencias y promociones de categorías similares.
+
+#descuentos personalizados, promociones por categorías de videojuegos 
+#de su interés y ofertas complementarias para incentivar nuevas compras.
+
+#campañas de retencion y crecimiento
